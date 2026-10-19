@@ -6,9 +6,9 @@ Sistema administrativo integrado (académico) con **React**, **Node.js/Express**
 
 | Área | Estado |
 |------|--------|
-| Backend API (Express) | Inicial — salud y conexión SQL |
-| Frontend (React/Vite) | Pendiente |
-| Autenticación / roles | Pendiente |
+| Backend API (Express) | Salud, conexión SQL y autenticación |
+| Frontend (React/Vite) | Login y dashboard |
+| Autenticación / roles | JWT, bitácora de acceso y bloqueo tras dos fallos |
 | Módulos de negocio | Pendiente |
 
 ## Arquitectura (objetivo)
@@ -21,20 +21,20 @@ Supermercado/
 │   │   ├── database/     # pool SQL Server
 │   │   ├── routes/
 │   │   ├── controllers/
-│   │   ├── services/     # (próximo) lógica de negocio
+│   │   ├── services/     # servicios de usuarios, autenticación y bitácora
 │   │   ├── middleware/   # auth, errores
 │   │   └── validators/
 │   └── test/
-├── frontend/         # (próximo) React + Vite
-└── database/         # (próximo) scripts SQL / migraciones
+├── frontend/         # React + Vite
+└── database/         # esquema SQL / migraciones
 ```
 
-**Flujo:** React → Axios → API REST → servicios → consultas parametrizadas → `SistemaNegocio`.
+**Flujo:** React → Fetch API → Express → servicios → consultas parametrizadas → `SistemaNegocio`.
 
 ## Plan de implementación (prioridad)
 
 1. **Conexión SQL y salud** — pool `mssql`, `GET /api/health/db` ✅
-2. **Autenticación, sesiones/JWT, bitácora de login, bloqueos**
+2. **Autenticación, sesiones/JWT, bitácora de login, bloqueos** ✅
 3. **Usuarios, roles y permisos (backend + rutas protegidas)**
 4. **Productos e inventario (+ migración movimientos si falta)**
 5. **Compras, proveedores, recepción**
@@ -77,12 +77,19 @@ npm install
 ### Variables de entorno
 
 Ver `backend/.env.example`. No suba `.env` al repositorio.
+Configure `JWT_SECRET` con un valor aleatorio de al menos 32 caracteres antes
+de iniciar la API. Genere uno con:
+
+```bash
+node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+```
 
 | Variable | Descripción |
 |----------|-------------|
 | `DB_SERVER` | Instancia, p. ej. `DESKTOP-T1FGP81\\SQLEXPRESS` |
 | `DB_NAME` | `SistemaNegocio` |
 | `DB_AUTH_MODE` | `windows` o `sql` |
+| `JWT_SECRET` | Secreto aleatorio (mínimo 32 caracteres recomendado) |
 
 ### Ejecutar API
 
@@ -132,3 +139,23 @@ Respuesta esperada si todo está bien:
 |--------|------|-------------|
 | GET | `/api/health` | Estado del servicio API |
 | GET | `/api/health/db` | `SELECT DB_NAME()` — diagnóstico de BD |
+| POST | `/api/auth/login` | Valida credenciales, registra la bitácora y devuelve un JWT |
+| GET | `/api/auth/me` | Devuelve la identidad del JWT (requiere `Authorization: Bearer <token>`) |
+
+Login acepta `{ "username": "...", "password": "..." }`. Las credenciales
+incorrectas responden `401`; al segundo fallo la API bloquea la cuenta, registra
+ambos eventos en `Bitacora` y responde `423` (`ACCOUNT_BLOCKED`).
+
+## Frontend — ejecutar
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+Copie `frontend/.env.example` a `frontend/.env` para cambiar `VITE_API_URL` si la
+API no está en `http://localhost:3001`. El login persiste el token y la identidad
+en `localStorage`; el dashboard verifica la sesión con `/api/auth/me`. La cuenta
+se bloquea al segundo intento de contraseña incorrecta y debe desbloquearla un
+administrador.
