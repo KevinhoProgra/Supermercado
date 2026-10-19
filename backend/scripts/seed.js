@@ -13,6 +13,7 @@ import { ALL_ROLES, ROLES, USER_STATES } from '../src/constants/roles.js';
 
 const MIN_PASSWORD_LENGTH = 8;
 
+
 async function ensureRoles() {
   for (const nombre of ALL_ROLES) {
     await query(

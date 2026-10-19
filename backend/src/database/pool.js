@@ -53,6 +53,14 @@ function buildConfig(sql) {
     return {
       ...base,
       driver: 'msnodesqlv8',
+      connectionString: [
+        'Driver={ODBC Driver 17 for SQL Server}',
+        `Server={${env.db.server.replace(/}/g, '}}')}}`,
+        `Database={${env.db.database.replace(/}/g, '}}')}}`,
+        'Trusted_Connection=Yes',
+        `Encrypt=${env.db.encrypt ? 'Yes' : 'No'}`,
+        `TrustServerCertificate=${env.db.trustServerCertificate ? 'Yes' : 'No'}`,
+      ].join(';'),
       options: {
         ...base.options,
         trustedConnection: true,
