@@ -45,34 +45,32 @@ Supermercado/
 
 ## Requisitos
 
-- **Node.js 20 o 22 LTS** recomendado (Windows Authentication con `msnodesqlv8` suele fallar en Node 23+ por falta de binarios nativos).
+- **Node.js y npm** (los comandos del backend ejecutan Node 22 LTS para compatibilidad con `msnodesqlv8`).
 - SQL Server Express con base de datos `SistemaNegocio`
+- ODBC Driver 17 for SQL Server
 
 ## Backend — instalación
 
 ```bash
 cd backend
-npm install
+npx --yes --package=node@22 --call "npm install"
 ```
 
 ### Autenticación en SQL Server
 
-**Windows (como en SSMS con DESKTOP-T1FGP81\\Kevinho):**
+**Autenticación de Windows (recomendada para desarrollo local):**
 
 1. Copie `.env.example` a `.env` y deje `DB_AUTH_MODE=windows`.
-2. Instale el driver nativo (necesario para Integrated Security desde Node):
-
-   ```bash
-   npm install msnodesqlv8
-   ```
-
-   Si falla la compilación, instale [Visual Studio Build Tools](https://visualstudio.microsoft.com/visual-cpp-build-tools/) con “Desktop development with C++”, o use autenticación SQL (abajo).
+2. Ejecute el backend con una cuenta de Windows que tenga acceso a `SistemaNegocio`.
+3. La instalación del backend incluye `msnodesqlv8`; la conexión usa el ODBC
+   Driver 17 y la cuenta de Windows que ejecuta Node. Los comandos `npm run`
+   del backend usan Node 22 automáticamente.
 
 **Autenticación SQL (alternativa):**
 
-1. En SSMS: servidor → Propiedades → Seguridad → “SQL Server and Windows Authentication mode”.
-2. Cree un login SQL con acceso a `SistemaNegocio` (permisos mínimos necesarios).
-3. En `.env`: `DB_AUTH_MODE=sql`, `DB_USER=...`, `DB_PASSWORD=...`.
+En SSMS, habilite el modo “SQL Server and Windows Authentication mode” y cree
+un login SQL con acceso a `SistemaNegocio`. Después configure
+`DB_AUTH_MODE=sql`, `DB_USER` y `DB_PASSWORD` en `.env`.
 
 ### Variables de entorno
 
@@ -113,10 +111,11 @@ cd backend
 npm run db:check
 ```
 
-**Prueba realizada en este entorno (2026-10-19):**
+**Verificado en desarrollo local (2026-10-19):**
 
-- `sqlcmd` con Windows Authentication → **OK**, base de datos `SistemaNegocio`.
-- Backend Node **v26.1.0** + `msnodesqlv8` → **falló** (sin prebuild para Node 26; compilación nativa falló). Solución: usar Node 20/22 LTS o autenticación SQL.
+- La cuenta de Windows actual conecta a `SistemaNegocio` mediante ODBC Driver 17.
+- `npm run db:check` → **OK**, `databaseName: SistemaNegocio`.
+- El login de `admin1` y la validación de sesión (`/api/auth/me`) → **OK**.
 
 Respuesta esperada si todo está bien:
 
