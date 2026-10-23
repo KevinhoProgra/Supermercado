@@ -22,7 +22,6 @@ export const env = {
   },
   auth: {
     maxFailedAttempts: Number(process.env.MAX_FAILED_LOGIN_ATTEMPTS) || 2,
-    unknownUserLockMs: Number(process.env.LOGIN_UNKNOWN_USER_LOCK_MS) || 30_000,
   },
   seed: {
     adminPassword: process.env.SEED_ADMIN_PASSWORD || '',
@@ -33,6 +32,14 @@ export const env = {
     admin2: {
       username: process.env.SEED_ADMIN2_USERNAME || 'admin2',
       nombre: process.env.SEED_ADMIN2_NOMBRE || 'Administrador Dos',
+    },
+    cashier: {
+      username: process.env.SEED_CAJERO_USERNAME || 'Cajero',
+      nombre: process.env.SEED_CAJERO_NOMBRE || 'Cajero',
+    },
+    purchasing: {
+      username: process.env.SEED_COMPRAS_USERNAME || 'Encargado de compras',
+      nombre: process.env.SEED_COMPRAS_NOMBRE || 'Encargado de compras',
     },
   },
   db: {

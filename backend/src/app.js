@@ -2,6 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import healthRoutes from './routes/healthRoutes.js';
 import authRoutes from './routes/authRoutes.js';
+import businessRoutes from './routes/businessRoutes.js';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler.js';
 
 export function createApp() {
@@ -12,6 +13,7 @@ export function createApp() {
 
   app.use('/api', healthRoutes);
   app.use('/api/auth', authRoutes);
+  app.use('/api', businessRoutes);
 
   app.use(notFoundHandler);
   app.use(errorHandler);

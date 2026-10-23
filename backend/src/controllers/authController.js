@@ -6,6 +6,7 @@ import { registrarBitacora } from '../services/bitacoraService.js';
 import { verifyPassword } from '../utils/password.js';
 import { signAccessToken } from '../utils/jwt.js';
 import { applyUnknownUserLock } from '../middleware/loginThrottle.js';
+import { listPermissionsForRole } from '../services/accessService.js';
 
 function loginError(res, status, code, message) {
   return res.status(status).json({
@@ -29,10 +30,10 @@ export async function login(req, res, next) {
   try {
     const user = await findUserByUsername(username.trim());
     if (!user) {
-      applyUnknownUserLock(req);
+      await applyUnknownUserLock(req);
       await registrarBitacora({
         accion: 'LOGIN_FALLIDO',
-        detalle: 'Intento de inicio de sesión para un usuario inexistente.',
+        detalle: `Intento para usuario inexistente: ${username.trim()}`,
         resultado: 'Fallo',
       });
       return loginError(res, 401, 'INVALID_CREDENTIALS', 'Usuario o contraseña incorrectos.');
@@ -110,6 +111,7 @@ export async function login(req, res, next) {
       idRol: user.id_rol,
       rol: user.nombre_rol,
     });
+    const permissions = await listPermissionsForRole(user.nombre_rol);
     return res.json({
       success: true,
       data: {
@@ -120,6 +122,7 @@ export async function login(req, res, next) {
           username: user.username,
           id_rol: user.id_rol,
           nombre_rol: user.nombre_rol,
+          permisos: permissions,
         },
       },
     });
@@ -128,6 +131,25 @@ export async function login(req, res, next) {
   }
 }
 
-export function getCurrentUser(req, res) {
-  return res.json({ success: true, data: { user: req.user } });
+export async function getCurrentUser(req, res, next) {
+  try {
+    const permisos = await listPermissionsForRole(req.user.rol);
+    return res.json({ success: true, data: { user: { ...req.user, permisos } } });
+  } catch (err) {
+    return next(err);
+  }
+}
+
+export async function logout(req, res, next) {
+  try {
+    await registrarBitacora({
+      idUsuario: req.user.id,
+      accion: 'LOGOUT',
+      detalle: 'Cierre de sesión.',
+      resultado: 'Exito',
+    });
+    return res.json({ success: true, data: {} });
+  } catch (err) {
+    return next(err);
+  }
 }

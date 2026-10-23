@@ -16,18 +16,17 @@ export const USER_STATES = {
 export const ROLE_PERMISSIONS = {
   [ROLES.ADMIN]: ['*'],
   [ROLES.CAJERO]: [
-    'ventas:read',
+    'ventas:catalog',
     'ventas:create',
-    'pagos:create',
-    'productos:read',
     'reportes:ventas',
     'reportes:caja',
   ],
   [ROLES.COMPRAS]: [
-    'compras:*',
-    'proveedores:*',
+    'compras:read',
+    'compras:create',
+    'proveedores:read',
+    'proveedores:create',
     'productos:read',
-    'inventario:read',
   ],
 };
 
