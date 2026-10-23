@@ -40,13 +40,13 @@ export default function Dashboard() {
   return (
     <main className="dashboard-layout">
       <header className="topbar">
-        <a className="wordmark" href="/dashboard"><span>SN</span> SistemaNegocio</a>
+        <a className="wordmark" href="/dashboard"><span>SP</span> Sistema Supermercado</a>
         <button className="secondary-button" onClick={handleLogout}>Cerrar sesión</button>
       </header>
       <section className="dashboard-content">
         <p className="eyebrow">PANEL PRINCIPAL</p>
         <h1>Hola, {user?.nombre || user?.username || 'usuario'}</h1>
-        <p className="muted">Bienvenido al sistema de gestión del negocio.</p>
+        <p className="muted">Bienvenido al sistema de gestión del supermercado.</p>
         {statusMessage && <div className="alert" role="alert">{statusMessage}</div>}
         <article className="profile-card">
           <div className="avatar" aria-hidden="true">
