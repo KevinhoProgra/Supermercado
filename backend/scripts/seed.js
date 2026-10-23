@@ -51,6 +51,16 @@ async function ensureAdmin({ username, nombre }, idRol, passwordHash) {
   return { id: r.recordset[0].id_usuario, created: true };
 }
 
+async function roleId(nombre) {
+  const result = await query('SELECT id_rol FROM dbo.Roles WHERE nombre_rol = @nombre', { nombre });
+  if (!result.recordset?.[0]) throw new Error(`No se pudo encontrar el perfil ${nombre}.`);
+  return result.recordset[0].id_rol;
+}
+
+async function ensureSeedUser({ username, nombre }, roleName, passwordHash) {
+  return ensureAdmin({ username, nombre }, await roleId(roleName), passwordHash);
+}
+
 async function ensureConfig(idUsuario) {
   const existing = await query('SELECT COUNT(*) AS total FROM dbo.Configuracion_Sistema');
   if (Number(existing.recordset[0].total) > 0) return 'ya existía';
@@ -85,12 +95,16 @@ async function main() {
 
   const admin1 = await ensureAdmin(env.seed.admin1, idRolAdmin, passwordHash);
   const admin2 = await ensureAdmin(env.seed.admin2, idRolAdmin, passwordHash);
+  const cashier = await ensureSeedUser(env.seed.cashier, ROLES.CAJERO, passwordHash);
+  const purchasing = await ensureSeedUser(env.seed.purchasing, ROLES.COMPRAS, passwordHash);
   const config = await ensureConfig(admin1.id);
 
   console.log('Seed completado:');
   console.log(`  Roles: ${ALL_ROLES.join(', ')}`);
   console.log(`  ${env.seed.admin1.username}: ${admin1.created ? 'creado' : 'ya existía (su contraseña no se modifica)'}`);
   console.log(`  ${env.seed.admin2.username}: ${admin2.created ? 'creado' : 'ya existía (su contraseña no se modifica)'}`);
+  console.log(`  ${env.seed.cashier.username}: ${cashier.created ? 'creado' : 'ya existía (su contraseña no se modifica)'}`);
+  console.log(`  ${env.seed.purchasing.username}: ${purchasing.created ? 'creado' : 'ya existía (su contraseña no se modifica)'}`);
   console.log(`  Configuración del sistema: ${config}`);
 }
 

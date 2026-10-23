@@ -39,9 +39,9 @@ export default function Login() {
     <main className="login-layout">
       <section className="login-card" aria-labelledby="login-title">
         <div className="brand-mark" aria-hidden="true">SN</div>
-        <p className="eyebrow">SISTEMA DE GESTIÓN</p>
+        <p className="eyebrow">SISTEMA SUPERMERCADO</p>
         <h1 id="login-title">Bienvenido</h1>
-        <p className="muted">Inicie sesión en SistemaNegocio</p>
+        <p className="muted">Inicie sesión</p>
 
         <form onSubmit={handleSubmit} className="login-form">
           <label htmlFor="username">Usuario</label>
@@ -76,7 +76,7 @@ export default function Login() {
       </section>
       <aside className="login-aside">
         <div>
-          <span className="aside-label">SISTEMANEGOCIO</span>
+          <span className="aside-label">SISTEMA SUPERMERCADO</span>
           <h2>Todo tu negocio,<br />en un solo lugar.</h2>
           <p>Acceso seguro para la operación diaria de tu empresa.</p>
         </div>

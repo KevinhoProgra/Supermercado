@@ -8,8 +8,8 @@ Sistema administrativo integrado (académico) con **React**, **Node.js/Express**
 |------|--------|
 | Backend API (Express) | Salud, conexión SQL y autenticación |
 | Frontend (React/Vite) | Login y dashboard |
-| Autenticación / roles | JWT, bitácora de acceso y bloqueo tras dos fallos |
-| Módulos de negocio | Pendiente |
+| Autenticación / roles | JWT, permisos configurables, bitácora inmutable y bloqueo tras dos fallos |
+| Módulos de negocio | POS, pagos mixtos, inventario, compras, informes y administración |
 
 ## Arquitectura (objetivo)
 
@@ -31,17 +31,25 @@ Supermercado/
 
 **Flujo:** React → Fetch API → Express → servicios → consultas parametrizadas → `SistemaNegocio`.
 
-## Plan de implementación (prioridad)
+## Preparar la base de datos
 
-1. **Conexión SQL y salud** — pool `mssql`, `GET /api/health/db` ✅
-2. **Autenticación, sesiones/JWT, bitácora de login, bloqueos** ✅
-3. **Usuarios, roles y permisos (backend + rutas protegidas)**
-4. **Productos e inventario (+ migración movimientos si falta)**
-5. **Compras, proveedores, recepción**
-6. **Facturación POS, pagos mixtos, transacciones**
-7. **Configuración IVA/tipo de cambio**
-8. **Bitácora (solo lectura), informes, pruebas integrales**
-9. **Frontend por módulos alineado con la API**
+En SSMS, ejecute en este orden:
+
+1. `database/schema/SistemaNegocio.sql` (solo si aún no existe el esquema).
+2. `database/seed/001_roles.sql`.
+3. `database/migrations/001_bitacora_resultado.sql`.
+4. `database/migrations/002_operacion_supermercado.sql`.
+
+La segunda migración agrega permisos configurables, pedidos de compra con
+aprobación, su relación con las recepciones y protección contra cambios o
+eliminaciones de bitácora. Las ventas y recepciones actualizan el inventario
+dentro de transacciones SQL.
+
+Después, desde `backend/`, ejecute `npm run seed`. El seed crea los dos
+administradores (`admin1` y `admin2`), `Cajero` y `Encargado de compras`; los
+cuatro reciben la misma contraseña configurada en `SEED_ADMIN_PASSWORD`.
+Si una cuenta ya existe, el seed conserva su contraseña y datos. No comparta
+ni suba `backend/.env`.
 
 ## Requisitos
 
@@ -139,11 +147,28 @@ Respuesta esperada si todo está bien:
 | GET | `/api/health` | Estado del servicio API |
 | GET | `/api/health/db` | `SELECT DB_NAME()` — diagnóstico de BD |
 | POST | `/api/auth/login` | Valida credenciales, registra la bitácora y devuelve un JWT |
+| POST | `/api/auth/logout` | Registra el cierre de sesión |
 | GET | `/api/auth/me` | Devuelve la identidad del JWT (requiere `Authorization: Bearer <token>`) |
 
 Login acepta `{ "username": "...", "password": "..." }`. Las credenciales
 incorrectas responden `401`; al segundo fallo la API bloquea la cuenta, registra
 ambos eventos en `Bitacora` y responde `423` (`ACCOUNT_BLOCKED`).
+Un intento con un usuario inexistente también bloquea el formulario de acceso
+para ese origen hasta que un administrador lo desbloquee desde Administración;
+los intentos y desbloqueos quedan en la bitácora.
+
+Las rutas autenticadas bajo `/api` cubren productos/inventario, facturación,
+proveedores, pedidos y recepción de compras, informes de ventas y caja, y
+administración de usuarios/perfiles/bitácora. El backend vuelve a validar en
+la base de datos el estado y perfil del usuario en cada solicitud. El cajero
+solo recibe acceso a facturación e informes; compras recibe compras e
+inventario; el administrador conserva acceso completo.
+
+La bitácora se consulta y descarga como CSV mediante
+`GET /api/admin/audit?from=AAAA-MM-DD&to=AAAA-MM-DD&user=<id>&format=csv`;
+también se puede imprimir desde Administración. El informe de flujo suma los
+cobros registrados por medio de pago; el esquema actual no registra fondo
+inicial ni retiros de caja.
 
 ## Frontend — ejecutar
 

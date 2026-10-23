@@ -109,6 +109,15 @@ export async function updateUser(idUsuario, data, actor) {
     fields.push('nombre = @nombre');
     params.nombre = data.nombre;
   }
+  if (data.username !== undefined) {
+    if (typeof data.username !== 'string' || !data.username.trim() || data.username.trim().length > 50) {
+      const err = new Error('El nombre de usuario debe tener entre 1 y 50 caracteres');
+      err.statusCode = 400;
+      throw err;
+    }
+    fields.push('username = @username');
+    params.username = data.username.trim();
+  }
   if (data.id_rol !== undefined) {
     fields.push('id_rol = @id_rol');
     params.id_rol = data.id_rol;
