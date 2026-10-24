@@ -51,6 +51,12 @@ cuatro reciben la misma contraseña configurada en `SEED_ADMIN_PASSWORD`.
 Si una cuenta ya existe, el seed conserva su contraseña y datos. No comparta
 ni suba `backend/.env`.
 
+Para cargar proveedores, productos, compras de demostración, un pedido de
+compra pendiente y una venta con pago combinado para los informes, ejecute
+`database/seed/002_datos_demo.sql` en SSMS después de la migración y el seed del
+backend. El script se puede ejecutar de nuevo: conserva el inventario previo y
+no duplica las compras ni la factura de demostración del día.
+
 ## Requisitos
 
 - **Node.js y npm** (los comandos del backend ejecutan Node 22 LTS para compatibilidad con `msnodesqlv8`).
