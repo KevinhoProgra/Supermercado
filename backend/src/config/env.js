@@ -46,6 +46,7 @@ export const env = {
     server: process.env.DB_SERVER || 'localhost',
     database: process.env.DB_NAME || 'SistemaNegocio',
     authMode: readAuthMode(),
+    odbcDriver: process.env.DB_ODBC_DRIVER || 'SQL Server',
     user: process.env.DB_USER,
     password: process.env.DB_PASSWORD,
     encrypt: process.env.DB_ENCRYPT === 'true',

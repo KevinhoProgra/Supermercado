@@ -61,7 +61,7 @@ no duplica las compras ni la factura de demostración del día.
 
 - **Node.js y npm** (los comandos del backend ejecutan Node 22 LTS para compatibilidad con `msnodesqlv8`).
 - SQL Server Express con base de datos `SistemaNegocio`
-- ODBC Driver 17 for SQL Server
+- Un controlador ODBC para SQL Server (por defecto, el controlador integrado `SQL Server`)
 
 ## Backend — instalación
 
@@ -76,9 +76,12 @@ npx --yes --package=node@22 --call "npm install"
 
 1. Copie `.env.example` a `.env` y deje `DB_AUTH_MODE=windows`.
 2. Ejecute el backend con una cuenta de Windows que tenga acceso a `SistemaNegocio`.
-3. La instalación del backend incluye `msnodesqlv8`; la conexión usa el ODBC
-   Driver 17 y la cuenta de Windows que ejecuta Node. Los comandos `npm run`
-   del backend usan Node 22 automáticamente.
+3. La instalación del backend incluye `msnodesqlv8`; la conexión usa el
+   controlador configurado en `DB_ODBC_DRIVER` y la cuenta de Windows que
+   ejecuta Node. Por defecto usa `SQL Server`; si tienes instalado ODBC Driver
+   17 o 18, puedes establecer `DB_ODBC_DRIVER=ODBC Driver 17 for SQL Server`
+   (o su nombre exacto de controlador). Los comandos `npm run` del backend
+   usan Node 22 automáticamente.
 
 **Autenticación SQL (alternativa):**
 
@@ -101,6 +104,7 @@ node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 | `DB_SERVER` | Instancia, p. ej. `DESKTOP-T1FGP81\\SQLEXPRESS` |
 | `DB_NAME` | `SistemaNegocio` |
 | `DB_AUTH_MODE` | `windows` o `sql` |
+| `DB_ODBC_DRIVER` | Controlador ODBC para autenticación Windows (por defecto, `SQL Server`) |
 | `JWT_SECRET` | Secreto aleatorio (mínimo 32 caracteres recomendado) |
 
 ### Ejecutar API
@@ -127,7 +131,7 @@ npm run db:check
 
 **Verificado en desarrollo local (2026-10-19):**
 
-- La cuenta de Windows actual conecta a `SistemaNegocio` mediante ODBC Driver 17.
+- La cuenta de Windows actual conecta a `SistemaNegocio` mediante el controlador ODBC configurado.
 - `npm run db:check` → **OK**, `databaseName: SistemaNegocio`.
 - El login de `admin1` y la validación de sesión (`/api/auth/me`) → **OK**.
 
