@@ -2,9 +2,10 @@ export const ROLES = {
   ADMIN: 'Administrador',
   CAJERO: 'Cajero',
   COMPRAS: 'Encargado de compras',
+  CLIENTE: 'Cliente',
 };
 
-export const ALL_ROLES = [ROLES.ADMIN, ROLES.CAJERO, ROLES.COMPRAS];
+export const ALL_ROLES = [ROLES.ADMIN, ROLES.CAJERO, ROLES.COMPRAS, ROLES.CLIENTE];
 
 export const USER_STATES = {
   ACTIVE: 'Activo',
@@ -28,6 +29,7 @@ export const ROLE_PERMISSIONS = {
     'proveedores:create',
     'productos:read',
   ],
+  [ROLES.CLIENTE]: ['tienda:catalog', 'tienda:orders:create', 'tienda:orders:read'],
 };
 
 export function roleHasPermission(roleName, permission) {

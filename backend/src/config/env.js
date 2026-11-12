@@ -41,6 +41,11 @@ export const env = {
       username: process.env.SEED_COMPRAS_USERNAME || 'Encargado de compras',
       nombre: process.env.SEED_COMPRAS_NOMBRE || 'Encargado de compras',
     },
+    customer: {
+      username: process.env.SEED_CLIENTE_NOMBRE || 'CLIENTE',
+      nombre: process.env.SEED_CLIENTE_NOMBRE || 'CLIENTE',
+      password: process.env.SEED_CLIENTE_PASSWORD || '',
+    },
   },
   db: {
     server: process.env.DB_SERVER || 'localhost',

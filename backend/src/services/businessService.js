@@ -58,6 +58,16 @@ async function getSystemConfig() {
 export async function listProducts() {
   const result = await query(
     `SELECT id_producto, codigo_barras, nombre_producto, precio_costo, precio_venta,
+            stock_actual, stock_minimo, aplica_iva, imagen_url
+     FROM dbo.Productos
+     ORDER BY nombre_producto`
+  );
+  return result.recordset ?? [];
+}
+
+export async function listSalesProducts() {
+  const result = await query(
+    `SELECT id_producto, codigo_barras, nombre_producto, precio_venta,
             stock_actual, stock_minimo, aplica_iva
      FROM dbo.Productos
      ORDER BY nombre_producto`
@@ -65,7 +75,25 @@ export async function listProducts() {
   return result.recordset ?? [];
 }
 
+export async function listStoreProducts() {
+  const result = await query(
+    `SELECT id_producto, nombre_producto, precio_venta, stock_actual, aplica_iva, imagen_url
+     FROM dbo.Productos
+     WHERE stock_actual > 0
+     ORDER BY nombre_producto`
+  );
+  const config = await getSystemConfig();
+  return {
+    products: result.recordset ?? [],
+    porcentaje_iva: Number(config.porcentaje_iva),
+  };
+}
+
 export async function saveProduct(data, idProducto, actor) {
+  const rawImageUrl = data.imagen_url;
+  const imageUrl = rawImageUrl == null || rawImageUrl === ''
+    ? null
+    : typeof rawImageUrl === 'string' ? rawImageUrl.trim() : rawImageUrl;
   const values = {
     codigo_barras: data.codigo_barras,
     nombre_producto: data.nombre_producto,
@@ -73,6 +101,7 @@ export async function saveProduct(data, idProducto, actor) {
     precio_venta: Number(data.precio_venta),
     stock_minimo: Number(data.stock_minimo ?? 0),
     aplica_iva: data.aplica_iva === false ? 0 : 1,
+    imagen_url: imageUrl,
   };
   if (
     typeof values.codigo_barras !== 'string' ||
@@ -84,16 +113,21 @@ export async function saveProduct(data, idProducto, actor) {
     !Number.isFinite(values.precio_venta) ||
     values.precio_venta < 0 ||
     !Number.isInteger(values.stock_minimo) ||
-    values.stock_minimo < 0
+    values.stock_minimo < 0 ||
+    (values.imagen_url !== null &&
+      (typeof values.imagen_url !== 'string' ||
+       values.imagen_url.length > 2048 ||
+       !/^https?:\/\/\S+$/i.test(values.imagen_url)))
   ) {
-    throw httpError('Revise el código, nombre, precios y stock mínimo.');
+    throw httpError('Revise el código, nombre, precios, stock mínimo y URL de imagen.');
   }
   if (idProducto) {
     const result = await query(
       `UPDATE dbo.Productos
        SET codigo_barras = @codigo_barras, nombre_producto = @nombre_producto,
            precio_costo = @precio_costo, precio_venta = @precio_venta,
-           stock_minimo = @stock_minimo, aplica_iva = @aplica_iva
+           stock_minimo = @stock_minimo, aplica_iva = @aplica_iva,
+           imagen_url = @imagen_url
        WHERE id_producto = @id_producto`,
       { ...values, id_producto: idProducto }
     );
@@ -101,8 +135,8 @@ export async function saveProduct(data, idProducto, actor) {
   } else {
     await query(
       `INSERT INTO dbo.Productos
-       (codigo_barras, nombre_producto, precio_costo, precio_venta, stock_minimo, aplica_iva)
-       VALUES (@codigo_barras, @nombre_producto, @precio_costo, @precio_venta, @stock_minimo, @aplica_iva)`,
+       (codigo_barras, nombre_producto, precio_costo, precio_venta, stock_minimo, aplica_iva, imagen_url)
+       VALUES (@codigo_barras, @nombre_producto, @precio_costo, @precio_venta, @stock_minimo, @aplica_iva, @imagen_url)`,
       values
     );
   }
@@ -110,6 +144,151 @@ export async function saveProduct(data, idProducto, actor) {
     idUsuario: actor.id,
     accion: idProducto ? 'PRODUCTO_MODIFICADO' : 'PRODUCTO_CREADO',
     detalle: values.nombre_producto,
+    resultado: 'Exito',
+  });
+}
+
+export async function createOnlineOrder(data, actor) {
+  const items = normalizeItems(data.items);
+  const products = await getProducts(items);
+  const productById = new Map(products.map((product) => [product.id_producto, product]));
+  const config = await getSystemConfig();
+  const ivaPercent = Number(config.porcentaje_iva);
+  let subtotalCents = 0;
+  let ivaCents = 0;
+  const lines = items.map((item) => {
+    const product = productById.get(item.id_producto);
+    if (product.stock_actual < item.cantidad) {
+      throw httpError(`Existencia insuficiente para ${product.nombre_producto}. Stock: ${product.stock_actual}.`, 409);
+    }
+    const lineSubtotal = moneyCents(product.precio_venta) * item.cantidad;
+    const lineTax = product.aplica_iva ? Math.round((lineSubtotal * ivaPercent) / 100) : 0;
+    subtotalCents += lineSubtotal;
+    ivaCents += lineTax;
+    return { ...item, product, lineSubtotal, lineTax };
+  });
+
+  const inputs = {
+    id_usuario: actor.id,
+    subtotal: amount(subtotalCents),
+    iva: amount(ivaCents),
+    total: amount(subtotalCents + ivaCents),
+  };
+  const statements = [
+    'SET XACT_ABORT ON; BEGIN TRY BEGIN TRANSACTION;',
+    `INSERT INTO dbo.Pedidos_Online (id_usuario, subtotal, monto_iva, total, estado)
+     VALUES (@id_usuario, @subtotal, @iva, @total, 'Pendiente');
+     DECLARE @id_pedido INT = SCOPE_IDENTITY();`,
+  ];
+  lines.forEach((line, index) => {
+    inputs[`product${index}`] = line.id_producto;
+    inputs[`quantity${index}`] = line.cantidad;
+    inputs[`name${index}`] = line.product.nombre_producto;
+    inputs[`price${index}`] = Number(line.product.precio_venta);
+    inputs[`lineSubtotal${index}`] = amount(line.lineSubtotal);
+    inputs[`lineTax${index}`] = amount(line.lineTax);
+    statements.push(
+      `UPDATE dbo.Productos
+       SET stock_actual = stock_actual - @quantity${index}
+       WHERE id_producto = @product${index} AND stock_actual >= @quantity${index};
+       IF @@ROWCOUNT = 0 THROW 50002, 'Existencia insuficiente para completar el pedido.', 1;
+       INSERT INTO dbo.Detalle_Pedido_Online
+       (id_pedido, id_producto, nombre_producto, cantidad, precio_unitario, subtotal_linea, iva_linea)
+       VALUES (@id_pedido, @product${index}, @name${index}, @quantity${index},
+               @price${index}, @lineSubtotal${index}, @lineTax${index});`
+    );
+  });
+  statements.push(
+    'COMMIT TRANSACTION; SELECT @id_pedido AS id_pedido;',
+    'END TRY BEGIN CATCH IF @@TRANCOUNT > 0 ROLLBACK TRANSACTION; THROW; END CATCH;'
+  );
+  const result = await query(statements.join('\n'), inputs);
+  const idPedido = result.recordset?.[0]?.id_pedido;
+  await registrarBitacora({
+    idUsuario: actor.id,
+    accion: 'PEDIDO_ONLINE_CREADO',
+    detalle: `Pedido en línea ${idPedido}, total ₡${amount(subtotalCents + ivaCents).toFixed(2)}`,
+    resultado: 'Exito',
+  });
+  return {
+    id_pedido: idPedido,
+    subtotal: amount(subtotalCents),
+    monto_iva: amount(ivaCents),
+    total: amount(subtotalCents + ivaCents),
+    estado: 'Pendiente',
+  };
+}
+
+export async function listOnlineOrders(idUsuario = null) {
+  const result = await query(
+    `SELECT p.id_pedido, p.id_usuario, p.fecha_pedido, p.subtotal, p.monto_iva, p.total, p.estado,
+            u.nombre AS nombre_cliente, d.id_producto, d.nombre_producto, d.cantidad,
+            d.precio_unitario, d.subtotal_linea, d.iva_linea
+     FROM dbo.Pedidos_Online p
+     INNER JOIN dbo.Usuarios u ON u.id_usuario = p.id_usuario
+     INNER JOIN dbo.Detalle_Pedido_Online d ON d.id_pedido = p.id_pedido
+     ${idUsuario === null ? '' : 'WHERE p.id_usuario = @id_usuario'}
+     ORDER BY p.fecha_pedido DESC, p.id_pedido DESC, d.id_detalle_pedido`,
+    idUsuario === null ? {} : { id_usuario: idUsuario }
+  );
+  const orders = new Map();
+  for (const row of result.recordset ?? []) {
+    if (!orders.has(row.id_pedido)) {
+      orders.set(row.id_pedido, {
+        id_pedido: row.id_pedido,
+        id_usuario: row.id_usuario,
+        nombre_cliente: row.nombre_cliente,
+        fecha_pedido: row.fecha_pedido,
+        subtotal: Number(row.subtotal),
+        monto_iva: Number(row.monto_iva),
+        total: Number(row.total),
+        estado: row.estado,
+        items: [],
+      });
+    }
+    orders.get(row.id_pedido).items.push({
+      id_producto: row.id_producto,
+      nombre_producto: row.nombre_producto,
+      cantidad: row.cantidad,
+      precio_unitario: Number(row.precio_unitario),
+      subtotal_linea: Number(row.subtotal_linea),
+      iva_linea: Number(row.iva_linea),
+    });
+  }
+  return [...orders.values()];
+}
+
+export async function updateOnlineOrderStatus(idPedido, estado, actor) {
+  const validStatuses = ['Preparando', 'Listo para retiro', 'Entregado', 'Cancelado'];
+  if (!validStatuses.includes(estado)) throw httpError('Estado de pedido inválido.');
+  const result = await query(
+    `SET XACT_ABORT ON; BEGIN TRY BEGIN TRANSACTION;
+     DECLARE @estado_actual VARCHAR(30);
+     SELECT @estado_actual = estado FROM dbo.Pedidos_Online WITH (UPDLOCK, ROWLOCK)
+     WHERE id_pedido = @id_pedido;
+     IF @estado_actual IS NULL THROW 50003, 'Pedido en línea no encontrado.', 1;
+     IF NOT (
+       (@estado_actual = 'Pendiente' AND @estado IN ('Preparando', 'Cancelado')) OR
+       (@estado_actual = 'Preparando' AND @estado IN ('Listo para retiro', 'Cancelado')) OR
+       (@estado_actual = 'Listo para retiro' AND @estado IN ('Entregado', 'Cancelado'))
+     ) THROW 50004, 'La transición de estado no está permitida.', 1;
+     IF @estado = 'Cancelado'
+       UPDATE p SET stock_actual = p.stock_actual + d.cantidad
+       FROM dbo.Productos p
+       INNER JOIN dbo.Detalle_Pedido_Online d ON d.id_producto = p.id_producto
+       WHERE d.id_pedido = @id_pedido;
+     UPDATE dbo.Pedidos_Online
+     SET estado = @estado, fecha_actualizacion = SYSDATETIME()
+     WHERE id_pedido = @id_pedido;
+     COMMIT TRANSACTION;
+     END TRY BEGIN CATCH IF @@TRANCOUNT > 0 ROLLBACK TRANSACTION; THROW; END CATCH;`,
+    { id_pedido: idPedido, estado }
+  );
+  if (!result.rowsAffected?.some((count) => count > 0)) throw httpError('No se pudo actualizar el pedido.', 409);
+  await registrarBitacora({
+    idUsuario: actor.id,
+    accion: estado === 'Cancelado' ? 'PEDIDO_ONLINE_CANCELADO' : 'PEDIDO_ONLINE_ACTUALIZADO',
+    detalle: `Pedido en línea ${idPedido}: ${estado}`,
     resultado: 'Exito',
   });
 }

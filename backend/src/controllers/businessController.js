@@ -34,7 +34,36 @@ export const listProducts = asyncHandler(async (_req, res) => {
 });
 
 export const listSalesProducts = asyncHandler(async (_req, res) => {
-  res.json({ success: true, data: { products: await business.listProducts() } });
+  res.json({ success: true, data: { products: await business.listSalesProducts() } });
+});
+
+export const listStoreProducts = asyncHandler(async (_req, res) => {
+  res.json({ success: true, data: await business.listStoreProducts() });
+});
+
+export const createOnlineOrder = asyncHandler(async (req, res) => {
+  res.status(201).json({ success: true, data: await business.createOnlineOrder(req.body ?? {}, req.user) });
+});
+
+export const customerOnlineOrders = asyncHandler(async (req, res) => {
+  res.json({ success: true, data: { orders: await business.listOnlineOrders(req.user.id) } });
+});
+
+export const adminOnlineOrders = asyncHandler(async (_req, res) => {
+  res.json({ success: true, data: { orders: await business.listOnlineOrders() } });
+});
+
+export const updateOnlineOrderStatus = asyncHandler(async (req, res) => {
+  const idPedido = Number(req.params.id);
+  if (!Number.isInteger(idPedido) || idPedido < 1) {
+    throw Object.assign(new Error('Pedido inválido.'), { statusCode: 400 });
+  }
+  const estado = req.body?.estado;
+  if (typeof estado !== 'string') {
+    throw Object.assign(new Error('Indique el nuevo estado del pedido.'), { statusCode: 400 });
+  }
+  await business.updateOnlineOrderStatus(idPedido, estado, req.user);
+  res.json({ success: true, data: { orders: await business.listOnlineOrders() } });
 });
 
 export const saveProduct = asyncHandler(async (req, res) => {

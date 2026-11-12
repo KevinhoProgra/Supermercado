@@ -21,7 +21,7 @@ export default function Login() {
         body: JSON.stringify({ username, password }),
       });
       login(data.token, data.user);
-      navigate('/dashboard', { replace: true });
+      navigate(data.user.nombre_rol === 'Cliente' ? '/store' : '/dashboard', { replace: true });
     } catch (err) {
       if (err.code === 'ACCOUNT_BLOCKED') {
         setError('La cuenta está bloqueada tras 2 intentos fallidos. Contacte a un administrador.');
@@ -38,10 +38,13 @@ export default function Login() {
   return (
     <main className="login-layout">
       <section className="login-card" aria-labelledby="login-title">
-        <div className="brand-mark" aria-hidden="true">SN</div>
-        <p className="eyebrow">SISTEMA SUPERMERCADO</p>
-        <h1 id="login-title">Bienvenido</h1>
-        <p className="muted">Inicie sesión</p>
+        <a className="login-brand" href="/login" aria-label="Mercado, inicio">
+          <span className="brand-mark" aria-hidden="true">M</span>
+          <span>mercado<span className="brand-period">.</span></span>
+        </a>
+        <p className="eyebrow">TU SUPERMERCADO, MÁS SIMPLE</p>
+        <h1 id="login-title">Qué gusto verte.</h1>
+        <p className="muted">Inicia sesión para continuar con tu día.</p>
 
         <form onSubmit={handleSubmit} className="login-form">
           <label htmlFor="username">Usuario</label>
@@ -75,12 +78,18 @@ export default function Login() {
         </form>
       </section>
       <aside className="login-aside">
-        <div>
-          <span className="aside-label">SISTEMA SUPERMERCADO</span>
-          <h2>Todo tu negocio,<br />en un solo lugar.</h2>
-          <p>Acceso seguro para la operación diaria de tu empresa.</p>
+        <div className="login-promo">
+          <span className="aside-label">FRESCO, FÁCIL Y EN ORDEN</span>
+          <h2>Lo bueno de<br />tu negocio.</h2>
+          <p>Ventas, inventario y compras trabajando juntos para que todo fluya.</p>
+          <div className="produce-art" aria-hidden="true">
+            <span className="produce produce-orange">🍊</span>
+            <span className="produce produce-leaf">🥬</span>
+            <span className="produce produce-berry">🍓</span>
+            <span className="produce-caption">Hecho para el día a día</span>
+          </div>
         </div>
-        <span className="aside-footnote">Acceso protegido · Registro de actividad</span>
+        <span className="aside-footnote"><span aria-hidden="true">✦</span> Acceso seguro para tu equipo</span>
       </aside>
     </main>
   );

@@ -9,4 +9,7 @@ IF NOT EXISTS (SELECT 1 FROM dbo.Roles WHERE nombre_rol = N'Cajero')
 
 IF NOT EXISTS (SELECT 1 FROM dbo.Roles WHERE nombre_rol = N'Encargado de compras')
     INSERT INTO dbo.Roles (nombre_rol) VALUES (N'Encargado de compras');
+
+IF NOT EXISTS (SELECT 1 FROM dbo.Roles WHERE nombre_rol = N'Cliente')
+    INSERT INTO dbo.Roles (nombre_rol) VALUES (N'Cliente');
 GO

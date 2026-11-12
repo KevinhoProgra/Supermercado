@@ -8,6 +8,11 @@ router.use(authenticate);
 
 router.get('/products', requirePermission('productos:read'), controller.listProducts);
 router.get('/sales/products', requirePermission('ventas:catalog'), controller.listSalesProducts);
+router.get('/store/products', requirePermission('tienda:catalog'), controller.listStoreProducts);
+router.post('/store/orders', requirePermission('tienda:orders:create'), controller.createOnlineOrder);
+router.get('/store/orders', requirePermission('tienda:orders:read'), controller.customerOnlineOrders);
+router.get('/admin/store-orders', requireRoles(ROLES.ADMIN), controller.adminOnlineOrders);
+router.patch('/admin/store-orders/:id', requireRoles(ROLES.ADMIN), controller.updateOnlineOrderStatus);
 router.post('/products', requireRoles(ROLES.ADMIN), controller.saveProduct);
 router.put('/products/:id', requireRoles(ROLES.ADMIN), controller.saveProduct);
 router.get('/config', requirePermission('ventas:catalog'), controller.getConfig);

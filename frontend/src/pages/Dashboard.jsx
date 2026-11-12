@@ -11,6 +11,7 @@ const MODULES = {
     ['inventory', 'Inventario'],
     ['purchases', 'Compras'],
     ['reports', 'Informes'],
+    ['online-orders', 'Pedidos en línea'],
     ['admin', 'Administración'],
   ],
   Cajero: [
@@ -21,6 +22,16 @@ const MODULES = {
     ['purchases', 'Compras'],
     ['inventory', 'Inventario'],
   ],
+};
+
+const MODULE_ICONS = {
+  home: '⌂',
+  sales: '▣',
+  inventory: '◈',
+  purchases: '＋',
+  reports: '▤',
+  admin: '⚙',
+  'online-orders': '▣',
 };
 
 function modulesForUser(user) {
@@ -81,24 +92,34 @@ export default function Dashboard() {
   return (
     <main className="dashboard-layout">
       <header className="topbar">
-        <a className="wordmark" href="/dashboard"><span>SP</span> Sistema Supermercado</a>
+        <a className="wordmark" href="/dashboard">
+          <span className="wordmark-icon" aria-hidden="true">M</span>
+          <span className="wordmark-copy"><strong>mercado<span>.</span></strong><small>GESTIÓN DE SUPERMERCADO</small></span>
+        </a>
         <div className="topbar-actions">
-          <span className="role-badge">{user?.nombre_rol || 'Rol asignado'}</span>
-          <button className="secondary-button" onClick={handleLogout}>Cerrar sesión</button>
+          <span className="role-badge"><span aria-hidden="true">●</span> {user?.nombre_rol || 'Rol asignado'}</span>
+          <button className="secondary-button logout-button" onClick={handleLogout}>Cerrar sesión <span aria-hidden="true">↗</span></button>
         </div>
       </header>
       <div className="workspace">
         <aside className="module-nav" aria-label="Módulos">
-          <p className="profile-label">MÓDULOS</p>
+          <p className="profile-label">MENÚ PRINCIPAL</p>
           {modules.map(([id, label]) => (
             <button
               key={id}
               className={`nav-item ${module === id ? 'selected' : ''}`}
               onClick={() => setModule(id)}
             >
-              {label}
+              <span className="nav-icon" aria-hidden="true">{MODULE_ICONS[id]}</span>
+              <span>{label}</span>
+              {module === id && <span className="nav-chevron" aria-hidden="true">›</span>}
             </button>
           ))}
+          <div className="nav-help">
+            <span className="nav-help-icon" aria-hidden="true">✦</span>
+            <strong>Un día productivo</strong>
+            <span>Tu negocio en buenas manos.</span>
+          </div>
         </aside>
         <section className="dashboard-content module-content">
           {statusMessage && <div className="alert" role="alert">{statusMessage}</div>}
@@ -106,9 +127,26 @@ export default function Dashboard() {
             <p className="muted">Verificando sesión...</p>
           ) : module === 'home' ? (
             <>
-              <p className="eyebrow">PANEL PRINCIPAL</p>
-              <h1>Hola, {user?.nombre || user?.username || 'usuario'}</h1>
-              <p className="muted">Bienvenido al sistema de gestión del supermercado.</p>
+              <div className="welcome-banner">
+                <div className="welcome-copy">
+                  <p className="eyebrow">PANEL PRINCIPAL <span className="welcome-dot">✦</span></p>
+                  <h1>¡Hola, {user?.nombre || user?.username || 'usuario'}!</h1>
+                  <p>Todo listo para que tu supermercado siga creciendo.</p>
+                  {modules.some(([id]) => id === 'sales') && (
+                    <button className="welcome-button" onClick={() => setModule('sales')}>Ir a cajas <span aria-hidden="true">→</span></button>
+                  )}
+                </div>
+                <div className="welcome-art" aria-hidden="true">
+                  <span className="welcome-sun" />
+                  <span className="welcome-fruit welcome-fruit-one">🍐</span>
+                  <span className="welcome-fruit welcome-fruit-two">🍋</span>
+                  <span className="welcome-leaf">✳</span>
+                </div>
+              </div>
+              <div className="home-section-heading">
+                <div><p className="eyebrow">TU ESPACIO DE TRABAJO</p><h2>¿Qué vamos a hacer hoy?</h2></div>
+                <p className="home-date">Una buena jornada empieza aquí <span aria-hidden="true">☀</span></p>
+              </div>
               <article className="profile-card">
                 <div className="avatar" aria-hidden="true">
                   {(user?.nombre || user?.username || 'U').slice(0, 1).toUpperCase()}
@@ -123,7 +161,9 @@ export default function Dashboard() {
               <div className="module-tiles">
                 {modules.filter(([id]) => id !== 'home').map(([id, label]) => (
                   <button className="module-tile" key={id} onClick={() => setModule(id)}>
-                    <span>{label}</span><strong>›</strong>
+                    <span className="tile-icon" aria-hidden="true">{MODULE_ICONS[id]}</span>
+                    <span className="tile-copy"><strong>{label}</strong><small>Ver módulo</small></span>
+                    <span className="tile-arrow" aria-hidden="true">→</span>
                   </button>
                 ))}
               </div>

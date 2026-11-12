@@ -86,6 +86,11 @@ async function main() {
       `Defina SEED_ADMIN_PASSWORD en backend/.env (mínimo ${MIN_PASSWORD_LENGTH} caracteres).`
     );
   }
+  if (env.seed.customer.password.length < MIN_PASSWORD_LENGTH) {
+    throw new Error(
+      `Defina SEED_CLIENTE_PASSWORD en backend/.env (mínimo ${MIN_PASSWORD_LENGTH} caracteres).`
+    );
+  }
   if (env.seed.admin1.username === env.seed.admin2.username) {
     throw new Error('SEED_ADMIN1_USERNAME y SEED_ADMIN2_USERNAME deben ser distintos.');
   }
@@ -97,6 +102,11 @@ async function main() {
   const admin2 = await ensureAdmin(env.seed.admin2, idRolAdmin, passwordHash);
   const cashier = await ensureSeedUser(env.seed.cashier, ROLES.CAJERO, passwordHash);
   const purchasing = await ensureSeedUser(env.seed.purchasing, ROLES.COMPRAS, passwordHash);
+  const customer = await ensureSeedUser(
+    env.seed.customer,
+    ROLES.CLIENTE,
+    await hashPassword(env.seed.customer.password)
+  );
   const config = await ensureConfig(admin1.id);
 
   console.log('Seed completado:');
@@ -105,6 +115,7 @@ async function main() {
   console.log(`  ${env.seed.admin2.username}: ${admin2.created ? 'creado' : 'ya existía (su contraseña no se modifica)'}`);
   console.log(`  ${env.seed.cashier.username}: ${cashier.created ? 'creado' : 'ya existía (su contraseña no se modifica)'}`);
   console.log(`  ${env.seed.purchasing.username}: ${purchasing.created ? 'creado' : 'ya existía (su contraseña no se modifica)'}`);
+  console.log(`  ${env.seed.customer.username}: ${customer.created ? 'creado' : 'ya existía (su contraseña no se modifica)'}`);
   console.log(`  Configuración del sistema: ${config}`);
 }
 
